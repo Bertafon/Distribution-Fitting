@@ -116,7 +116,7 @@ A graphical comparison of the empirical distribution function with the distribut
 ```{r message=FALSE}
 empirical = ecdf(x)
 xx = seq(700,2400, by= 0.5)
-plot(xx, empirical(xx), type = 'l', col = 'green', lwd=5, xlab = "", ylab = "") # dystrybuanta
+plot(xx, empirical(xx), type = 'l', col = 'green', lwd=5, xlab = "", ylab = "")
 lines(xx, plnorm(xx, mi,sigma), col= "red", lwd=4) 
 ```
 
