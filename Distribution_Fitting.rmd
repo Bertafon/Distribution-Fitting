@@ -1,0 +1,163 @@
+# Programming Analytical Methods - project
+### Norbert Burmistrzak
+
+### **Introduction**
+The aim of this study is to find the appropriate distribution to the data on poviat budget income per capita in 2020. 
+For this purpose, the maximum likelihood method, the method of moments and the generalized method of moments were used.
+Then the obtained distributions were verified.
+The data comes from the main
+Statistical Office.
+
+### **Data**
+
+```{r message=FALSE, warning= FALSE}
+library("maxLik")
+library(tseries)
+
+data = read.csv('data.csv', sep = ';', header = 1)
+
+x = data$Income
+logx = log(x)
+n = length(x)
+
+summary(x)
+```
+
+### **Preliminary graphical data analysis**
+
+```{r message=FALSE, fig.align = "center",fig.width = 10}
+par(mfrow=c(1,2))
+boxplot(x, xlab = "Income")
+hist(x, main = NULL, xlab = "Income", breaks = 12)
+
+jarque.bera.test(x)
+```
+
+Graphical analysis suggests that the distribution is close to a normal distribution, but there are many outliers pointing in one direction. The Jarque-Bera test also suggests rejecting the normal distribution hypothesis. It can be assumed that taking the logarithm of the data will bring them to a normal distribution.
+
+```{r message=FALSE, fig.align = "center",fig.width = 10}
+par(mfrow=c(1,2))
+boxplot(logx, xlab = "log of Income")
+hist(logx, main = NULL, xlab = "log of Income", breaks = 12)
+
+jarque.bera.test(logx)
+```
+
+The logarithm of the data made the observations evenly distributed. The Jarque-Bera test confirms that this variable is normally distributed. If Y = logX is normally distributed with the parameters µ, σ, this means that the variable X will be log-normally distributed with the same parameters. Therefore, in the next steps, the parameters for logX were estimated using a normal distribution, and then it was verified whether X is log-normally distributed with these parameters.
+
+### **Parameters estimation**
+
+### Maximum likelihood estimation
+\
+**likelihood function**
+```{r message=FALSE}
+L = function(param){
+  miu = param[1]
+  sigma = param[2]
+  return( ((1/(sigma*sqrt(2*pi)))^n) * exp( (-1/(2*sigma^2))*sum((logx - miu)^2) ) )
+}
+```
+\
+**logarithm of the likelihood function**
+```{r message=FALSE}
+logL = function(param){
+  miu = param[1]
+  sigma = param[2]
+  return(-1/2*n*log(2*pi) - n*log(sigma) - (1/2)*sum((logx - miu)^2/sigma^2))
+}
+```
+\
+**gradient**
+```{r message=FALSE}
+gradlogL = function(param){
+  miu = param[1]
+  sigma = param[2]
+  grad = numeric(2)
+  grad[1] = sum( (logx-miu)/sigma^2 )
+  grad[2] = -n/sigma + sum( (logx-miu)^2/sigma^3 )
+  return(grad)
+}
+```
+\
+**hessian**
+```{r message=FALSE}
+heslogL = function(param){
+  miu = param[1]
+  sigma = param[2]
+  hessian = matrix(0, nrow = 2, ncol = 2)
+  hessian[1,1] = n/sigma^3 - 3*sum((logx-miu)^2/sigma^4)
+  hessian[1,2] = -2*sum( (logx-miu)/sigma^3 )
+  hessian[2,1] = hessian[1,2]
+  hessian[2,2] = -n/sigma^2
+  return(hessian)
+}
+```
+\
+**Results**
+```{r message=FALSE}
+res = maxNR(fn = logL, grad = gradlogL, hess = heslogL, start = c(mean(logx),sd(logx)))
+
+res$estimate
+```
+expected value = 7.227\
+variance = 0.202\
+
+**Kolmogorov–Smirnov test**
+```{r message=FALSE}
+mi = 7.2273830
+sigma = 0.2022326
+ks.test(x, 'plnorm', mi, sigma)
+```
+There is no reason to reject the hypothesis of the equality of probability distributions.The distribution is log-normal with the parameters obtained in the estimation process.
+
+### Comparison of distribution functions
+
+A graphical comparison of the empirical distribution function with the distribution function of a log-normal distribution with parameters µ, σ obtained using the maximum likelihood method also shows that the data represent this distribution
+```{r message=FALSE}
+empirical = ecdf(x)
+xx = seq(700,2400, by= 0.5)
+plot(xx, empirical(xx), type = 'l', col = 'green', lwd=5, xlab = "", ylab = "") # dystrybuanta
+lines(xx, plnorm(xx, mi,sigma), col= "red", lwd=4) 
+```
+
+### Quantile-quantile (q-q) plot
+The quantile plot compares the empirical quantiles with the theoretical quantiles. It is very close to the 45-degree line, which also proves the high similarity of the distributions
+```{r message=FALSE}
+q_empical = quantile(x, prob = 1:100/100)
+q_theoretical = qlnorm(1:100/100, mean = mi, sd = sigma)
+plot(q_theoretical, q_empical, ylab = "empical", xlab = "theoretical")
+abline(0,1, col = "red")
+```
+
+### Alternative estimation methods: method of moments and generalized method of moments
+\
+**Method of moments**
+```{r message=FALSE}
+sd(logx)
+mean(logx)
+```
+Very close results\
+
+**Generalized method of moments**
+```{r message=FALSE}
+f <- function(param){
+  mi = param[1]
+  sigma = param[2]
+  m = rbind(logx-mi, (logx-mi)^2-sigma^2, (logx-mi)^4-3*sigma^4)
+  M = rowMeans(m)
+  W = m%*%t(m)/n
+  
+  return(-t(M)%*%solve(W)%*%M)
+}
+
+res_gmm = maxNR(f, start = c(mean(logx),sd(logx)))
+summary(res_gmm)
+```
+Again very similar results\
+
+
+
+
+
+
+
