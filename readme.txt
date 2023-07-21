@@ -1,0 +1,2 @@
+The aim of this study is to find the appropriate distribution to the data on poviat budget income per capita in 2020. 
+For this purpose, the maximum likelihood method, the method of moments and the generalized method of moments were used. The repository contains the report in html. 
